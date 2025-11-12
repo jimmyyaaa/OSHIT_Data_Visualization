@@ -4,6 +4,7 @@ import logging
 from data_process import (
     load_sheet_data,
     filter_df_by_date,
+    filter_df_by_date_pos,
     num_all_tx_excluding_reference,
     mean_median_by_address,
     avg_time_interval_by_address,
@@ -14,8 +15,10 @@ from data_process import (
     num_address_without_reference,
     num_lucky_draws,
     amount_lucky_draws,
-    num_address_lucky_draws
+    num_address_lucky_draws,
+    shit_price_day,
 )
+import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -57,9 +60,10 @@ def main():
         TS_df = data_frames["TS_Log"]
         TS_df_today = filter_df_by_date(TS_df, selected_date)
         TS_df_prev_day = filter_df_by_date(TS_df, selected_date - pd.Timedelta(days=1))
+        # POS 有特殊的时间范围（GMT + 8 中午12点为基准）
         POS_df = data_frames["POS_Log"]
-        POS_df_today = filter_df_by_date(POS_df, selected_date)
-        POS_df_prev_day = filter_df_by_date(POS_df, selected_date - pd.Timedelta(days=1))
+        POS_df_today = filter_df_by_date_pos(POS_df, selected_date)
+        POS_df_prev_day = filter_df_by_date_pos(POS_df, selected_date - pd.Timedelta(days=1))
         Staking_df = data_frames["Staking_Log"]
         Staking_df_today = filter_df_by_date(Staking_df, selected_date)
         Staking_df_prev_day = filter_df_by_date(Staking_df, selected_date - pd.Timedelta(days=1))
@@ -76,29 +80,29 @@ def main():
                 TS_11, TS_12, TS_13, TS_14 = st.columns(4, gap="medium")
                 TS_11.metric(
                     "交易总笔数",
-                    f"{TS_df_today.shape[0]}",
-                    delta = f"{TS_df_today.shape[0] - TS_df_prev_day.shape[0]}",
+                    f"{TS_df_today.shape[0]:,}",
+                    delta = f"{(TS_df_today.shape[0] - TS_df_prev_day.shape[0])/TS_df_prev_day.shape[0]:.2%}",
                     border = True
                 )
 
                 TS_12.metric(
-                    "交易领取数（剔除Reference）",
-                    f"{num_all_tx_excluding_reference(TS_df_today)}",
-                    delta = f"{num_all_tx_excluding_reference(TS_df_today) - num_all_tx_excluding_reference(TS_df_prev_day)}",
+                    "TS领取数（剔除Reference）",
+                    f"{num_all_tx_excluding_reference(TS_df_today):,}",
+                    delta = f"{(num_all_tx_excluding_reference(TS_df_today) - num_all_tx_excluding_reference(TS_df_prev_day)) / num_all_tx_excluding_reference(TS_df_prev_day):.2%}",
                     border = True
                 )
 
                 TS_13.metric(
-                    "交易金额",
-                    f"{TS_df_today['SHIT Sent'].sum()}",
-                    delta = f"{TS_df_today['SHIT Sent'].sum() - TS_df_prev_day['SHIT Sent'].sum()}",
+                    "TS交易总金额",
+                    f"{TS_df_today['SHIT Sent'].sum():,}",
+                    delta = f"{(TS_df_today['SHIT Sent'].sum() - TS_df_prev_day['SHIT Sent'].sum())/TS_df_prev_day['SHIT Sent'].sum():.2%}",
                     border = True
                 )
 
                 TS_14.metric(
                     "地址参与数",
-                    f"{num_address_without_reference(TS_df_today)}",
-                    delta = f"{num_address_without_reference(TS_df_today) - num_address_without_reference(TS_df_prev_day)}",
+                    f"{num_address_without_reference(TS_df_today):,}",
+                    delta = f"{(num_address_without_reference(TS_df_today) - num_address_without_reference(TS_df_prev_day)) / num_address_without_reference(TS_df_prev_day):.2%}",
                     border = True
                 )
 
@@ -115,13 +119,13 @@ def main():
 
                 TS_22.metric(
                     "每个地址领取中位数",
-                    f"{median_tx}",
-                    delta = f"{median_tx - median_tx_prev}",
+                    f"{int(median_tx)}",
+                    delta = f"{int(median_tx - median_tx_prev)}",
                     border = True
                 )
 
                 TS_23.metric(
-                    "一天内平均时间间隔（秒）",
+                    "一天内平均时间间隔（分）",
                     f"{avg_time_interval_by_address(TS_df_today):.2f}",
                     delta = f"{avg_time_interval_by_address(TS_df_today) - avg_time_interval_by_address(TS_df_prev_day):.2f}",
                     border = True
@@ -133,44 +137,44 @@ def main():
                 TS_0_prev, TS_1_prev, TS_2_prev = num_tx_by_reference_level(TS_df_prev_day)
                 TS_31.metric(
                     "独狼交易笔数",
-                    f"{TS_0}",
-                    delta = f"{TS_0 - TS_0_prev}",
+                    f"{TS_0:,}",
+                    delta = f"{(TS_0 - TS_0_prev) / TS_0_prev:.2%}",
                     border = True
                 )
 
                 TS_32.metric(
-                    "一级Reference交易笔数",
-                    f"{TS_1}",
-                    delta = f"{TS_1 - TS_1_prev}",
+                    "存在一个上级交易笔数",
+                    f"{TS_1:,}",
+                    delta = f"{(TS_1 - TS_1_prev) / TS_1_prev:.2%}",
                     border = True
                 )
 
                 TS_33.metric(
-                    "二级Reference交易笔数",
-                    f"{TS_2}",
-                    delta = f"{TS_2 - TS_2_prev}",
+                    "存在两个上级交易笔数",
+                    f"{TS_2:,}",
+                    delta = f"{(TS_2 - TS_2_prev) / TS_2_prev:.2%}",
                     border = True
                 )
                 
                 TS_41, TS_42, TS_43 = st.columns(3, gap="medium")    
                 TS_41.metric(
                     "抽奖总次数",
-                    f"{num_lucky_draws(TS_df_today)}",
-                    delta = f"{num_lucky_draws(TS_df_today) - num_lucky_draws(TS_df_prev_day)}",
+                    f"{num_lucky_draws(TS_df_today):,}",
+                    delta = f"{(num_lucky_draws(TS_df_today) - num_lucky_draws(TS_df_prev_day)) / num_lucky_draws(TS_df_prev_day):.2%}",
                     border = True
                 )
 
                 TS_42.metric(
                     "抽奖总金额",
-                    f"{amount_lucky_draws(TS_df_today)}",
-                    delta = f"{amount_lucky_draws(TS_df_today) - amount_lucky_draws(TS_df_prev_day)}",
+                    f"{amount_lucky_draws(TS_df_today):,}",
+                    delta = f"{(amount_lucky_draws(TS_df_today) - amount_lucky_draws(TS_df_prev_day)) / amount_lucky_draws(TS_df_prev_day):.2%}",
                     border = True
                 )
 
                 TS_43.metric(
                     "抽奖地址参与数",
-                    f"{num_address_lucky_draws(TS_df_today)}",
-                    delta = f"{num_address_lucky_draws(TS_df_today) - num_address_lucky_draws(TS_df_prev_day)}",
+                    f"{num_address_lucky_draws(TS_df_today):,}",
+                    delta = f"{(num_address_lucky_draws(TS_df_today) - num_address_lucky_draws(TS_df_prev_day)) / num_address_lucky_draws(TS_df_prev_day):.2%}",
                     border = True
                 )
                 
@@ -196,41 +200,54 @@ def main():
                 POS_11, POS_12, POS_13, POS_14 = st.columns(4, gap="medium")
                 POS_11.metric(
                     "交易笔数",
-                    f"{POS_df_today.shape[0]}",
-                    delta = f"{POS_df_today.shape[0] - POS_df_prev_day.shape[0]}",
+                    f"{POS_df_today.shape[0]:,}",
+                    delta = f"{(POS_df_today.shape[0] - POS_df_prev_day.shape[0]) / POS_df_prev_day.shape[0]:.2%}",
                     border = True
                 )
 
                 POS_12.metric(
                     "总交易金额",
                     f"{POS_df_today['SHIT Sent'].sum():,.2f}",
-                    delta = f"{POS_df_today['SHIT Sent'].sum() - POS_df_prev_day['SHIT Sent'].sum():,.2f}",
+                    delta = f"{(POS_df_today['SHIT Sent'].sum() - POS_df_prev_day['SHIT Sent'].sum()) / POS_df_prev_day['SHIT Sent'].sum():.2%}",
                     border = True
                 )
 
                 POS_13.metric(
                     "最大交易金额",
                     f"{POS_df_today['SHIT Sent'].max():,.2f}",
-                    delta = f"{POS_df_today['SHIT Sent'].max() - POS_df_prev_day['SHIT Sent'].max():,.2f}",
+                    delta = f"{(POS_df_today['SHIT Sent'].max() - POS_df_prev_day['SHIT Sent'].max()) / POS_df_prev_day['SHIT Sent'].max():.2%}",
                     border = True
                 )
 
                 POS_14.metric(
                     "最小交易金额",
                     f"{POS_df_today['SHIT Sent'].min():,.2f}",
-                    delta = f"{POS_df_today['SHIT Sent'].min() - POS_df_prev_day['SHIT Sent'].min():,.2f}",
+                    delta = f"{(POS_df_today['SHIT Sent'].min() - POS_df_prev_day['SHIT Sent'].min()) / POS_df_prev_day['SHIT Sent'].min():.2%}",
                     border = True
                 )
+
+                st.write("交易金额分布")
+                fig, ax = plt.subplots(figsize=(10, 5))
+                
+                n, bins, patches = ax.hist(POS_df_today['SHIT Sent']/1000, bins=20, color='#7FBA00', edgecolor='gray', alpha=0.7)
+
+                ax.set_xticks(bins)
+                ax.set_xticklabels([f'{int(x)}' for x in bins], rotation=45, ha='right')
+                
+                ax.set_xlabel('Amount (in thousands)', fontsize=12, color='gray')
+                ax.set_ylabel('Frequency', fontsize=12, color='gray')
+                ax.set_title('Transaction Amount Distribution', fontsize=14, fontweight='bold', color='gray')
+                ax.tick_params(colors='gray')  # 刻度标签颜色灰色
+                ax.spines['left'].set_visible(False)   # 左边框隐藏
+                ax.spines['bottom'].set_visible(False) # 下边框隐藏
+                ax.spines['top'].set_visible(False)   # 隐藏上边框
+                ax.spines['right'].set_visible(False) # 隐藏右边框
+                ax.grid(axis='y', alpha=0.2, color='gray')
+                st.pyplot(fig, transparent=True)
+                plt.close(fig)
+                
 
                 POS_duplicate_count, POS_duplicate_df = count_addresses_by_tx_count(POS_df_today, min_tx_count=1)
-                POS_duplicate_count_prev, POS_duplicate_df_prev = count_addresses_by_tx_count(POS_df_prev_day, min_tx_count=1)
-                st.metric(
-                    "交易次数>1的地址数量",
-                    f"{POS_duplicate_count}",
-                    delta = f"{POS_duplicate_count - POS_duplicate_count_prev}",
-                    border = True
-                )
-
                 if POS_duplicate_count > 0:
                     st.write("交易次数>1的地址列表：")
                     st.dataframe(
@@ -250,38 +267,49 @@ def main():
                 SC_11, SC_12, SC_13, SC_14 = st.columns(4, gap="medium")
                 SC_11.metric(
                     "领取次数",
-                    f"{ShitCode_df_today.shape[0]}",
-                    delta = f"{ShitCode_df_today.shape[0] - ShitCode_df_prev_day.shape[0]}",
+                    f"{ShitCode_df_today.shape[0]:,}",
+                    delta = f"{(ShitCode_df_today.shape[0] - ShitCode_df_prev_day.shape[0]) / ShitCode_df_prev_day.shape[0]:.2%}",
                     border = True
                 )
 
                 SC_12.metric(
                     "领取金额",
-                    f"{ShitCode_df_today['SHIT Sent'].sum():,.2f}",
-                    delta = f"{ShitCode_df_today['SHIT Sent'].sum() - ShitCode_df_prev_day['SHIT Sent'].sum():,.2f}",
+                    f"{ShitCode_df_today['SHIT Sent'].sum():,}",
+                    delta = f"{(ShitCode_df_today['SHIT Sent'].sum() - ShitCode_df_prev_day['SHIT Sent'].sum())/ShitCode_df_prev_day['SHIT Sent'].sum():.2%}",
                     border = True
                 )
 
                 SC_13.metric(
                     "地址参与数",
-                    f"{ShitCode_df_today['Receiver Address'].nunique()}",
-                    delta = f"{ShitCode_df_today['Receiver Address'].nunique() - ShitCode_df_prev_day['Receiver Address'].nunique()}",
+                    f"{ShitCode_df_today['Receiver Address'].nunique():,}",
+                    delta = f"{(ShitCode_df_today['Receiver Address'].nunique() - ShitCode_df_prev_day['Receiver Address'].nunique())/ShitCode_df_prev_day['Receiver Address'].nunique():.2%}",
                     border = True
                 )
 
                 SC_14.metric(
                     "地址重复率（vs昨天）",
                     f"{address_repeat_rate_vs_yesterday(ShitCode_df, selected_date) * 100:.2f}%",
-                    delta = f"{address_repeat_rate_vs_yesterday(ShitCode_df, selected_date) * 100 - address_repeat_rate_vs_yesterday(ShitCode_df, selected_date - pd.Timedelta(days=1)) * 100:.2f}%",
+                    delta = f"{(address_repeat_rate_vs_yesterday(ShitCode_df, selected_date) - address_repeat_rate_vs_yesterday(ShitCode_df, selected_date - pd.Timedelta(days=1)))/address_repeat_rate_vs_yesterday(ShitCode_df, selected_date - pd.Timedelta(days=1)):.2%}",
                     border = True
                 )
 
                 st.metric(
-                    "用户可获利",
-                    f"place_holder",
-                    delta = f"place_holder",
+                    "用户可获利 (SOL)",
+                    f"{shit_price_day(ShitCode_df_today)*4350:.4f}",
+                    delta = f"{(shit_price_day(ShitCode_df_today) - shit_price_day(ShitCode_df_prev_day))/shit_price_day(ShitCode_df_prev_day):.2%}",
                     border = True
                 )
+                
+                
+                SC_address_df = ShitCode_df_today.groupby('Receiver Address').size().reset_index()
+                SC_address_df.columns = ['Receiver Address', 'Transaction Count']
+                SC_address_df = SC_address_df.sort_values(by='Transaction Count', ascending=False)
+                st.write("每个地址领取次数分布")
+                st.dataframe(
+                    SC_address_df.reset_index(drop=True),
+                    width='stretch',
+                )
+                
 
             else:
                 st.info("当天无 SHIT Code 交易数据")
@@ -292,7 +320,7 @@ def main():
 
             if len(Staking_df_today) > 0:
 
-                SK_11, SK_12, SK_13, SK_14 = st.columns(4, gap="medium")
+                SK_11, SK_12 = st.columns(2, gap="medium")
                 SK_11.metric(
                     "质押总额",
                     f"place_holder",
@@ -307,17 +335,18 @@ def main():
                     border = True
                 )
 
-                SK_13.metric(
+                SK_21, SK_22 = st.columns(2, gap="medium")
+                SK_21.metric(
                     "奖励领取数",
-                    f"{Staking_df_today.shape[0]}",
-                    delta = f"{Staking_df_today.shape[0] - Staking_df_prev_day.shape[0]}",
+                    f"{Staking_df_today.shape[0]:,}",
+                    delta = f"{(Staking_df_today.shape[0] - Staking_df_prev_day.shape[0]) / Staking_df_prev_day.shape[0]:.2%}",
                     border = True
                 )
 
-                SK_14.metric(
+                SK_22.metric(
                     "奖励领取金额",
                     f"{Staking_df_today['SHIT Sent'].sum():,.2f}",
-                    delta = f"{Staking_df_today['SHIT Sent'].sum() - Staking_df_prev_day['SHIT Sent'].sum():,.2f}",
+                    delta = f"{(Staking_df_today['SHIT Sent'].sum() - Staking_df_prev_day['SHIT Sent'].sum()) / Staking_df_prev_day['SHIT Sent'].sum():.2%}",
                     border = True
                 )
 
@@ -330,44 +359,59 @@ def main():
 
             SOL_11, SOL_12, SOL_13, SOL_14 = st.columns(4)
             if len(TS_df_today) > 0:
+                TS_Revenue_today = TS_df_today['SOL_Received'].sum()
+                TS_Revenue_prev_day = TS_df_prev_day['SOL_Received'].sum()
                 SOL_11.metric(
                     "TS收入",
-                    f"{TS_df_today['SOL_Received'].sum():,.4f}",
-                    delta = f"{TS_df_today['SOL_Received'].sum() - TS_df_prev_day['SOL_Received'].sum():,.4f}",
+                    f"{TS_Revenue_today:,.4f}",
+                    delta = f"{(TS_Revenue_today - TS_Revenue_prev_day) / TS_Revenue_prev_day:,.2%}",
                     border = True
                 )
             else:
                 st.info("当天无 TS 交易数据")
 
             if len(POS_df_today) > 0:
+                POS_Revenue_today = POS_df_today['SOL Received'].sum()
+                POS_Revenue_prev_day = POS_df_prev_day['SOL Received'].sum()
                 SOL_12.metric(
                     "POS收入",
-                    f"{POS_df_today['SOL Received'].sum():,.4f}",
-                    delta = f"{POS_df_today['SOL Received'].sum() - POS_df_prev_day['SOL Received'].sum():,.4f}",
+                    f"{POS_Revenue_today:,.4f}",
+                    delta = f"{(POS_Revenue_today - POS_Revenue_prev_day) / POS_Revenue_prev_day:,.2%}",
                     border = True
                 )
             else:
                 st.info("当天无 POS 交易数据")
 
             if len(Staking_df_today) > 0:
+                Staking_Revenue_today = Staking_df_today['SOL Received'].sum()
+                Staking_Revenue_prev_day = Staking_df_prev_day['SOL Received'].sum()
                 SOL_13.metric(
                     "Staking收入",
-                    f"{Staking_df_today['SOL Received'].sum():,.4f}",
-                    delta = f"{Staking_df_today['SOL Received'].sum() - Staking_df_prev_day['SOL Received'].sum():,.4f}",
+                    f"{Staking_Revenue_today:,.4f}",
+                    delta = f"{(Staking_Revenue_today - Staking_Revenue_prev_day) / Staking_Revenue_prev_day:,.2%}",
                     border = True
                 )
             else:
                 st.info("当天无 Staking 交易数据")
 
             if len(ShitCode_df_today) > 0:
+                ShitCode_Revenue_today = ShitCode_df_today['SOL Received'].sum()
+                ShitCode_Revenue_prev_day = ShitCode_df_prev_day['SOL Received'].sum()
                 SOL_14.metric(
                     "SHIT Code收入",
-                    f"{ShitCode_df_today['SOL Received'].sum():,.4f}",
-                    delta = f"{ShitCode_df_today['SOL Received'].sum() - ShitCode_df_prev_day['SOL Received'].sum():,.4f}",
+                    f"{ShitCode_Revenue_today:,.4f}",
+                    delta = f"{(ShitCode_Revenue_today - ShitCode_Revenue_prev_day)/ShitCode_Revenue_prev_day:,.2%}",
                     border = True
                 )
             else:
                 st.info("当天无 SHIT Code 交易数据")
+
+            st.metric(
+                "总收入", 
+                f"{TS_Revenue_today + POS_Revenue_today + Staking_Revenue_today + ShitCode_Revenue_today:,.4f}",
+                delta = f"{((TS_Revenue_today + POS_Revenue_today + Staking_Revenue_today + ShitCode_Revenue_today) - (TS_Revenue_prev_day + POS_Revenue_prev_day + Staking_Revenue_prev_day + ShitCode_Revenue_prev_day))/(TS_Revenue_prev_day + POS_Revenue_prev_day + Staking_Revenue_prev_day + ShitCode_Revenue_prev_day):,.2%}",
+                border = True
+            )
 
     except Exception as e:
         st.error("Failed to load Google Sheets data. Please ensure the service account email has Viewer access and that service_account and sheet_id are configured in secrets. Error: " + str(e))

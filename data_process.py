@@ -15,8 +15,15 @@ def load_sheet_data(sheet_names):
     
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
     
-    with open('oshit-data-visualization-dd0ed1145527.json', 'r') as f:
-        sa_json = json.load(f)
+    # with open('oshit-data-visualization-dd0ed1145527.json', 'r') as f:
+    #     sa_json = json.load(f)
+    #     print(sa_json)
+    #     print(type(sa_json))
+    sa_str = st.secrets["google"]["service_account"]
+    sa_json = json.loads(sa_str)
+    # print(sa_str)
+    # print(type(sa_str))
+    # sa_json = json.loads(sa_str)
     creds = Credentials.from_service_account_info(sa_json, scopes=SCOPES)
     gc = gspread.authorize(creds)
 
@@ -44,12 +51,19 @@ def filter_df_by_date(df, date):
     filtered_df = df[df['Timestamp(UTC+8)'].dt.date == date]
     return filtered_df
 
+def filter_df_by_date_pos(df, date):
+    """
+    Filter the POS DataFrame for rows 'Date' matching the given date.
+    """
+    filtered_df = df[(df['Timestamp(UTC+8)'] + pd.Timedelta(hours=12)).dt.date == date]
+    return filtered_df
+
 def num_all_tx_excluding_reference(df):
     """
     Calculate the number of all transactions excluding 'Reference'.
     """
     filtered_df = df[df['TS_Category'] == 0]
-    total_tx = filtered_df['Receiver Address'].count()
+    total_tx = filtered_df.shape[0]
     return total_tx
 
 def mean_median_by_address(df):
@@ -83,7 +97,7 @@ def avg_time_interval_by_address(df):
             # 计算相邻两次交易的时间间隔
             timestamps = addr_df['Timestamp(UTC+8)'].values
             for i in range(len(timestamps) - 1):
-                interval = (timestamps[i + 1] - timestamps[i]) / pd.Timedelta(seconds=1)  # 转成秒
+                interval = (timestamps[i + 1] - timestamps[i]) / pd.Timedelta(minutes=1)  # 转成分钟
                 intervals.append(interval)
     
     if len(intervals) == 0:
@@ -214,3 +228,13 @@ def repeat_claim_rate_and_ranking(full_df, selected_date):
     # ✓ 只返回排行榜
     return ranking
 
+def shit_price_day(df):
+    """
+    Calculate the SHIT price on a specific day in SOL.
+    """
+    if df.empty:
+        return 0
+
+    # Calculate the average SHIT price
+    shit_price = df['SOL Received']/ (df['SHIT Sent']*0.13)
+    return shit_price.mean()
