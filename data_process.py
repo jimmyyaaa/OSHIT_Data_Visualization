@@ -198,7 +198,7 @@ def repeat_claim_rate_and_ranking(full_df, selected_date):
     full_df_filtered = full_df[full_df['TS_Category'] == 0]
     
     # 获取过去 7 天的日期范围
-    start_date = selected_date - timedelta(days=7)
+    start_date = selected_date - timedelta(days=6)
     end_date = selected_date
     
     # 过滤过去 7 天的数据
