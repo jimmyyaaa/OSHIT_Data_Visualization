@@ -1,62 +1,7 @@
-import streamlit as st
-import json
-from google.oauth2.service_account import Credentials
-import gspread
 import pandas as pd
 import logging
 
 logger = logging.getLogger(__name__)
-
-def load_sheet_data(sheet_names):
-    """
-    Open Google Sheet by SHEET_ID and load sheets listed in sheet_names.
-    Returns a dictionary of DataFrames keyed by sheet name.
-    """
-    
-    SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-    
-    # with open('oshit-data-visualization-dd0ed1145527.json', 'r') as f:
-    #     sa_json = json.load(f)
-    #     print(sa_json)
-    #     print(type(sa_json))
-    sa_str = st.secrets["google"]["service_account"]
-    sa_json = json.loads(sa_str)
-    # print(sa_str)
-    # print(type(sa_str))
-    # sa_json = json.loads(sa_str)
-    creds = Credentials.from_service_account_info(sa_json, scopes=SCOPES)
-    gc = gspread.authorize(creds)
-
-    SHEET_ID = st.secrets["google"]["sheet_id"]
-    sh = gc.open_by_key(SHEET_ID)
-    
-    result = {}
-    for sheet_name in sheet_names:
-        ws = sh.worksheet(sheet_name)
-        records = ws.get_all_records()
-        df = pd.DataFrame(records)
-        # 转换日期列
-        if 'Timestamp(UTC+8)' in df.columns:
-            df['Timestamp(UTC+8)'] = pd.to_datetime(df['Timestamp(UTC+8)'])
-
-        result[sheet_name] = df
-        logger.info(f"Loaded sheet: {sheet_name}")
-    
-    return result
-
-def filter_df_by_date(df, date):
-    """
-    Filter the DataFrame for rows 'Timestamp(UTC+8)' matching the given date.
-    """
-    filtered_df = df[df['Timestamp(UTC+8)'].dt.date == date]
-    return filtered_df
-
-def filter_df_by_date_pos(df, date):
-    """
-    Filter the POS DataFrame for rows 'Date' matching the given date.
-    """
-    filtered_df = df[(df['Timestamp(UTC+8)'] + pd.Timedelta(hours=12)).dt.date == date]
-    return filtered_df
 
 def num_all_tx_excluding_reference(df):
     """
@@ -118,8 +63,8 @@ def num_lucky_draws(df):
     """
     Count the number of lucky draws (TS_Category == 3).
     """
-    lucky_draws = df[df['TS_Category'] == 3].shape[0]
-    return lucky_draws
+    lucky_draws = df[df['TS_Category'] == 3]
+    return lucky_draws.shape[0]
 
 def amount_lucky_draws(df):
     """
@@ -146,16 +91,29 @@ def num_tx_by_reference_level(df):
 
 def count_addresses_by_tx_count(df, min_tx_count=1):
     """
-    Count the number of addresses with transaction count > min_tx_count.
+    Count the number of addresses with transaction count > min_tx_count per day.
+    Date is calculated by: Timestamp(UTC+8) - 12 hours (so midnight-noon is grouped with previous day).
+    Returns: (count, DataFrame with columns [Receiver Address, Date, Transaction Count])
+    Only shows records where transaction count > min_tx_count.
     """
-    # 按地址分组，计算每个地址的交易次数
-    address_tx_count = df.groupby('Receiver Address').size()
+    if df.empty:
+        return pd.DataFrame(columns=['Receiver Address', 'Date', 'Transaction Count'])
     
-    # 统计交易次数 > min_tx_count 的地址数
-    result = (address_tx_count > min_tx_count).sum()
-    result_df = address_tx_count[address_tx_count > min_tx_count].reset_index()
-    result_df.columns = ['Receiver Address', 'Transaction Count']
-    return result, result_df
+    # 调整日期（减12小时作为分界线）
+    df = df.copy()
+    df['adjusted_date'] = (df['Timestamp(UTC+8)'] + pd.Timedelta(hours=12)).dt.date
+    
+    # 按地址和调整后的日期分组，计算每组的交易笔数
+    grouped = df.groupby(['Receiver Address', 'adjusted_date']).size().reset_index(name='Transaction Count')
+    
+    # 筛选交易笔数 > min_tx_count 的记录
+    result_df = grouped[grouped['Transaction Count'] > min_tx_count].copy()
+    result_df.columns = ['Receiver Address', 'Date', 'Transaction Count']
+    
+    # 按日期和交易次数排序
+    result_df = result_df.sort_values(['Date', 'Transaction Count'], ascending=[False, False]).reset_index(drop=True)
+    
+    return result_df
 
 def address_repeat_rate_vs_yesterday(full_df, selected_date):
     """
@@ -185,50 +143,25 @@ def address_repeat_rate_vs_yesterday(full_df, selected_date):
     
     return repeat_rate
 
-def repeat_claim_rate_and_ranking(full_df, selected_date):
+def repeat_claim_ranking_by_address(df):
     """
     Exclude 'Reference' rows, then
-    Calculate ranking of addresses by claim count in past 7 days.
-    Only show addresses that appear on selected_date.
-    Returns: ranking DataFrame with columns [Receiver Address, 过去7天领取次数]
+    Calculate ranking of addresses by claim count.
+    Returns: ranking DataFrame with columns [Receiver Address, 领取次数]
     """
-    from datetime import timedelta
-    
     # 只考虑非 Reference 的数据
-    full_df_filtered = full_df[full_df['TS_Category'] == 0]
+    df_filtered = df[df['TS_Category'] == 0]
     
-    # 获取过去 7 天的日期范围
-    start_date = selected_date - timedelta(days=6)
-    end_date = selected_date
+    # 每个地址的领取次数
+    ranking = df_filtered.groupby('Receiver Address').size().reset_index(name='领取次数')
     
-    # 过滤过去 7 天的数据
-    df_7days = full_df_filtered[
-        (full_df_filtered['Timestamp(UTC+8)'].dt.date >= start_date) & 
-        (full_df_filtered['Timestamp(UTC+8)'].dt.date <= end_date)
-    ].copy()
-    
-    # 只看当天的数据
-    df_today = full_df_filtered[full_df_filtered['Timestamp(UTC+8)'].dt.date == selected_date].copy()
-    
-    if len(df_today) == 0:
-        return pd.DataFrame()
-    
-    # 当天出现的地址
-    today_addresses = set(df_today['Receiver Address'].unique())
-    
-    # 过去 7 天每个地址的领取次数
-    ranking = df_7days.groupby('Receiver Address').size().reset_index(name='过去7天领取次数')
-    
-    # ✓ 只保留当天出现的地址
-    ranking = ranking[ranking['Receiver Address'].isin(today_addresses)]
-    
-    # 按过去 7 天领取次数从高到低排序
-    ranking = ranking.sort_values('过去7天领取次数', ascending=False).reset_index(drop=True)
+    # 按领取次数从高到低排序
+    ranking = ranking.sort_values('领取次数', ascending=False).reset_index(drop=True)
     
     # ✓ 只返回排行榜
     return ranking
 
-def shit_price_day(df):
+def shit_price_avg(df):
     """
     Calculate the SHIT price on a specific day in SOL.
     """
