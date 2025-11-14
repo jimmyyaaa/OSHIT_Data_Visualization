@@ -7,6 +7,7 @@ from google.oauth2.service_account import Credentials
 
 logger = logging.getLogger(__name__)
 
+@st.cache_data
 def load_sheet_data(sheet_names):
     """
     Open Google Sheet by SHEET_ID and load sheets listed in sheet_names.

@@ -14,29 +14,30 @@ import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
-@st.cache_data
+
 def get_data_frames():
     return load_sheet_data(SHEET_NAMES)
 
 def main():
     try:
-        data_frames = get_data_frames()
+        data_frames = load_sheet_data(SHEET_NAMES)
 
         st.set_page_config(**PAGE_CONFIG)
 
         if st.sidebar.button(
             "刷新数据",
             width="stretch"
-            ):
+        ):
             st.cache_data.clear()
             st.rerun()
 
-        start_date = st.sidebar.date_input("选择开始日期 (UTC +8):", min_value=MIN_DATE, max_value=MAX_DATE)
-        end_date = st.sidebar.date_input("选择结束日期 (UTC +8):", min_value=start_date, max_value=MAX_DATE)
+        start_date = st.sidebar.date_input("选择开始日期 (UTC +8):", value="today", min_value=MIN_DATE, max_value=MAX_DATE)
+        end_date = st.sidebar.date_input("选择结束日期 (UTC +8):", value="today", min_value=start_date, max_value=MAX_DATE)
 
         section = st.sidebar.selectbox(
             "选择数据板块",
             ["TS Data", "POS Data", "SHIT Code Data", "Staking Data", "SOL Revenue"],
+            index=0
         )
         
         st.title("OSHIT Web3 Data Visualization")
@@ -93,6 +94,6 @@ def main():
             render_revenue_section(TS_df_current, TS_df_prev, POS_df_current, POS_df_prev, Staking_df_current, Staking_df_prev, ShitCode_df_current, ShitCode_df_prev)
 
     except Exception as e:
-        st.error("Failed to load Google Sheets data. Please ensure the service account email has Viewer access and that service_account and sheet_id are configured in secrets. Error: " + str(e))
+        st.error("Error: " + str(e))
 
 main()
