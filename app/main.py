@@ -8,7 +8,8 @@ from app.ui.sections.pos_section import render_pos_section
 from app.ui.sections.shitcode_section import render_shitcode_section
 from app.ui.sections.staking_section import render_staking_section
 from app.ui.sections.revenue_section import render_revenue_section
-from data.filters import filter_df_by_date_range, filter_df_by_date_range_pos
+from app.ui.sections.defi_section import render_defi_section
+from data.filters import filter_df_by_date_range, filter_df_by_date_range_offset
 from data.calculations import shit_price_avg
 import matplotlib.pyplot as plt
 
@@ -36,7 +37,7 @@ def main():
 
         section = st.sidebar.selectbox(
             "选择数据板块",
-            ["TS Data", "POS Data", "SHIT Code Data", "Staking Data", "SOL Revenue"],
+            ["TS Data", "POS Data", "SHIT Code Data", "Staking Data", "SOL Revenue", "DeFi Data"],
             index=0
         )
         
@@ -48,15 +49,16 @@ def main():
         prev_end_date = start_date - pd.Timedelta(days=1)
 
         # Filter data for the selected date range
+        # TS 有特殊的时间范围（GMT + 8 早上8点为基准）
         TS_df = data_frames["TS_Log"]
-        TS_df_current = filter_df_by_date_range(TS_df, start_date, end_date)
-        TS_df_prev = filter_df_by_date_range(TS_df, prev_start_date, prev_end_date)
-        
+        TS_df_current = filter_df_by_date_range_offset(TS_df, start_date, end_date, 16)
+        TS_df_prev = filter_df_by_date_range_offset(TS_df, prev_start_date, prev_end_date, 16)
+
         # POS 有特殊的时间范围（GMT + 8 中午12点为基准）
         POS_df = data_frames["POS_Log"]
-        POS_df_current = filter_df_by_date_range_pos(POS_df, start_date, end_date)
-        POS_df_prev = filter_df_by_date_range_pos(POS_df, prev_start_date, prev_end_date)
-        
+        POS_df_current = filter_df_by_date_range_offset(POS_df, start_date, end_date, 12)
+        POS_df_prev = filter_df_by_date_range_offset(POS_df, prev_start_date, prev_end_date, 12)
+
         Staking_df = data_frames["Staking_Log"]
         Staking_df_current = filter_df_by_date_range(Staking_df, start_date, end_date)
         Staking_df_prev = filter_df_by_date_range(Staking_df, prev_start_date, prev_end_date)
@@ -68,6 +70,10 @@ def main():
         TS_DC_df = data_frames["TS_Discord"]
         TS_DC_df_current = filter_df_by_date_range(TS_DC_df, start_date, end_date)
         TS_DC_df_prev = filter_df_by_date_range(TS_DC_df, prev_start_date, prev_end_date)
+        
+        defi_df = data_frames["Liq_Pool_Activity"]
+        defi_df_current = filter_df_by_date_range(defi_df, start_date, end_date)
+        defi_df_prev = filter_df_by_date_range(defi_df, prev_start_date, prev_end_date)
 
         # Calculate Avg SHIT Price in SOL
         shit_price_avg_current = shit_price_avg(ShitCode_df_current)
@@ -92,6 +98,10 @@ def main():
         # Revenue Section
         elif section == "SOL Revenue":
             render_revenue_section(TS_df_current, TS_df_prev, POS_df_current, POS_df_prev, Staking_df_current, Staking_df_prev, ShitCode_df_current, ShitCode_df_prev)
+
+        # DeFi Section
+        elif section == "DeFi Data":
+            render_defi_section(defi_df_current, defi_df_prev)
 
     except Exception as e:
         st.error("Error: " + str(e))

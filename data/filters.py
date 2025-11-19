@@ -17,15 +17,15 @@ def filter_df_by_date_range(df, start_date, end_date):
     ]
     return filtered_df
 
-def filter_df_by_date_range_pos(df, start_date, end_date):
+def filter_df_by_date_range_offset(df, start_date, end_date, offset_hours):
     """
     Filter the POS DataFrame for rows 'Timestamp(UTC+8)' (adjusted by -12h) within the date range [start_date, end_date].
     Both dates are inclusive. The -12h adjustment groups midnight-noon data with the previous day.
     """
     if df.empty:
         return df
-    
-    adjusted_date = (df['Timestamp(UTC+8)'] + pd.Timedelta(hours=12)).dt.date
+
+    adjusted_date = (df['Timestamp(UTC+8)'] + pd.Timedelta(hours=offset_hours)).dt.date
     filtered_df = df[
         (adjusted_date >= start_date) & 
         (adjusted_date <= end_date)

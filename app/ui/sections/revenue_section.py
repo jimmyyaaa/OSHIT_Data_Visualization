@@ -21,7 +21,7 @@ def render_revenue_section(TS_df_current, TS_df_prev, POS_df_current, POS_df_pre
         TS_Revenue_prev = TS_df_prev['SOL_Received'].sum()
         SOL_11.metric(
             "TS收入",
-            f"{TS_Revenue_current:,.4f}",
+            f"{TS_Revenue_current:,.6f}",
             delta = f"{(TS_Revenue_current - TS_Revenue_prev) / TS_Revenue_prev:,.2%}" if TS_df_prev.shape[0] != 0 else "N/A",
             border = True
         )
@@ -33,7 +33,7 @@ def render_revenue_section(TS_df_current, TS_df_prev, POS_df_current, POS_df_pre
         POS_Revenue_prev = POS_df_prev['SOL Received'].sum()
         SOL_12.metric(
             "POS收入",
-            f"{POS_Revenue_current:,.4f}",
+            f"{POS_Revenue_current:,.6f}",
             delta = f"{(POS_Revenue_current - POS_Revenue_prev) / POS_Revenue_prev:,.2%}" if POS_df_prev.shape[0] != 0 else "N/A",
             border = True
         )
@@ -45,7 +45,7 @@ def render_revenue_section(TS_df_current, TS_df_prev, POS_df_current, POS_df_pre
         Staking_Revenue_prev = Staking_df_prev['SOL Received'].sum()
         SOL_13.metric(
             "Staking收入",
-            f"{Staking_Revenue_current:,.4f}",
+            f"{Staking_Revenue_current:,.6f}",
             delta = f"{(Staking_Revenue_current - Staking_Revenue_prev) / Staking_Revenue_prev:,.2%}" if Staking_df_prev.shape[0] != 0 else "N/A",
             border = True
         )
@@ -57,7 +57,7 @@ def render_revenue_section(TS_df_current, TS_df_prev, POS_df_current, POS_df_pre
         ShitCode_Revenue_prev = ShitCode_df_prev['SOL Received'].sum()
         SOL_14.metric(
             "SHIT Code收入",
-            f"{ShitCode_Revenue_current:,.4f}",
+            f"{ShitCode_Revenue_current:,.6f}",
             delta = f"{(ShitCode_Revenue_current - ShitCode_Revenue_prev)/ShitCode_Revenue_prev:,.2%}" if ShitCode_df_prev.shape[0] != 0 else "N/A",
             border = True
         )
@@ -66,7 +66,7 @@ def render_revenue_section(TS_df_current, TS_df_prev, POS_df_current, POS_df_pre
 
     st.metric(
         "总收入", 
-        f"{TS_Revenue_current + POS_Revenue_current + Staking_Revenue_current + ShitCode_Revenue_current:,.4f}",
+        f"{TS_Revenue_current + POS_Revenue_current + Staking_Revenue_current + ShitCode_Revenue_current:,.6f}",
         delta = f"{((TS_Revenue_current + POS_Revenue_current + Staking_Revenue_current + ShitCode_Revenue_current) - (TS_Revenue_prev + POS_Revenue_prev + Staking_Revenue_prev + ShitCode_Revenue_prev))/(TS_Revenue_prev + POS_Revenue_prev + Staking_Revenue_prev + ShitCode_Revenue_prev):,.2%}" if (TS_Revenue_prev + POS_Revenue_prev + Staking_Revenue_prev + ShitCode_Revenue_prev) != 0 else "N/A",
         border = True
     )

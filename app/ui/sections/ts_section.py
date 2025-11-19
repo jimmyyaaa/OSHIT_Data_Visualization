@@ -129,7 +129,7 @@ def render_ts_section(TS_df_current, TS_df_prev, TS_DC_df_current, TS_DC_df_prev
         TS_SOL_Revenue_without_reward_prev = TS_df_prev['SOL_Received'].sum()
         TS_51.metric(
             "TS收入（SOL): 不含奖励",
-            f"{TS_SOL_Revenue_without_reward_current:,.4f}",
+            f"{TS_SOL_Revenue_without_reward_current:,.6f}",
             delta = f"{(TS_SOL_Revenue_without_reward_current - TS_SOL_Revenue_without_reward_prev) / TS_SOL_Revenue_without_reward_prev:.2%}" if TS_SOL_Revenue_without_reward_prev !=0 else "N/A",
             border = True
         )
@@ -138,7 +138,7 @@ def render_ts_section(TS_df_current, TS_df_prev, TS_DC_df_current, TS_DC_df_prev
         SHIT_Cost_without_reward_prev = TS_df_prev['SHIT Sent'].sum() * shit_price_avg_prev
         TS_52.metric(
             "付出SHIT成本(SOL): 不含奖励",
-            f"{SHIT_Cost_without_reward_current:.4f}",
+            f"{SHIT_Cost_without_reward_current:.6f}",
             delta = f"{(SHIT_Cost_without_reward_current - SHIT_Cost_without_reward_prev) / SHIT_Cost_without_reward_prev:.2%}" if SHIT_Cost_without_reward_prev !=0 else "N/A",
             border = True
         )

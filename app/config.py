@@ -1,4 +1,4 @@
-SHEET_NAMES = ["TS_Log", "POS_Log", "Staking_Log", "ShitCode_Log", "TS_Discord"]
+SHEET_NAMES = ["TS_Log", "POS_Log", "Staking_Log", "ShitCode_Log", "TS_Discord", "Liq_Pool_Activity"]
 
 PAGE_CONFIG = {
     "page_title": "OSHIT Web3 Data",

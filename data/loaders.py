@@ -21,12 +21,19 @@ def load_sheet_data(sheet_names):
     creds = Credentials.from_service_account_info(sa_json, scopes=SCOPES)
     gc = gspread.authorize(creds)
 
-    SHEET_ID = st.secrets["google"]["sheet_id"]
-    sh = gc.open_by_key(SHEET_ID)
-    
+    OPERATIONAL_SHEET_ID = st.secrets["google"]["operational_sheet_id"]
+    op_sh = gc.open_by_key(OPERATIONAL_SHEET_ID)
+    DEFI_SHEET_ID = st.secrets["google"]["defi_sheet_id"]
+    df_sh = gc.open_by_key(DEFI_SHEET_ID)
+
     result = {}
-    for sheet_name in sheet_names:
-        ws = sh.worksheet(sheet_name)
+    for i, sheet_name in enumerate(sheet_names):
+        # 前5个表从operational sheet加载，最后一个表从defi sheet加载
+        if i < 5:
+            ws = op_sh.worksheet(sheet_name)
+        else:
+            ws = df_sh.worksheet(sheet_name)
+            
         records = ws.get_all_records()
         df = pd.DataFrame(records)
         # 转换日期列
@@ -34,6 +41,6 @@ def load_sheet_data(sheet_names):
             df['Timestamp(UTC+8)'] = pd.to_datetime(df['Timestamp(UTC+8)'])
 
         result[sheet_name] = df
-        logger.info(f"Loaded sheet: {sheet_name}")
-    
+        logger.info(f"Loaded sheet: {sheet_name} from {'operational' if i < 5 else 'defi'} sheet")
+
     return result

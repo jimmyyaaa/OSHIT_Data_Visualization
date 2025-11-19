@@ -46,7 +46,7 @@ def render_shitcode_section(ShitCode_df_current, ShitCode_df_prev, ShitCode_df, 
 
         st.metric(
             "用户可获利 (SOL)",
-            f"{shit_price_avg_current * 4350:.4f}",
+            f"{shit_price_avg_current * 4350:.6f}",
             delta = f"{(shit_price_avg_current - shit_price_avg_prev)/shit_price_avg_prev:.2%}" if shit_price_avg_prev != 0 else "N/A",
             border = True
         )
