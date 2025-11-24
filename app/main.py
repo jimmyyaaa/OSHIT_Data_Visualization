@@ -75,9 +75,14 @@ def main():
         defi_df_current = filter_df_by_date_range(defi_df, start_date, end_date)
         defi_df_prev = filter_df_by_date_range(defi_df, prev_start_date, prev_end_date)
 
+        # SHIT price df
+        shit_price_df = data_frames["SHIT_Price_Log"]
+        shit_price_df_current = filter_df_by_date_range(shit_price_df, start_date, end_date)
+        shit_price_df_prev = filter_df_by_date_range(shit_price_df, prev_start_date, prev_end_date)
+
         # Calculate Avg SHIT Price in SOL
-        shit_price_avg_current = shit_price_avg(ShitCode_df_current)
-        shit_price_avg_prev = shit_price_avg(ShitCode_df_prev)
+        shit_price_avg_current = shit_price_avg(shit_price_df_current)
+        shit_price_avg_prev = shit_price_avg(shit_price_df_prev)
 
         # TS Section
         if section == "TS Data":

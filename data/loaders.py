@@ -28,8 +28,8 @@ def load_sheet_data(sheet_names):
 
     result = {}
     for i, sheet_name in enumerate(sheet_names):
-        # 前5个表从operational sheet加载，最后一个表从defi sheet加载
-        if i < 5:
+        # 前6个表从operational sheet加载，最后一个表从defi sheet加载
+        if i < 6:
             ws = op_sh.worksheet(sheet_name)
         else:
             ws = df_sh.worksheet(sheet_name)
@@ -41,6 +41,6 @@ def load_sheet_data(sheet_names):
             df['Timestamp(UTC+8)'] = pd.to_datetime(df['Timestamp(UTC+8)'])
 
         result[sheet_name] = df
-        logger.info(f"Loaded sheet: {sheet_name} from {'operational' if i < 5 else 'defi'} sheet")
+        logger.info(f"Loaded sheet: {sheet_name} from {'operational' if i < 6 else 'defi'} sheet")
 
     return result

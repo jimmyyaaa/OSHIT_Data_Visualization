@@ -167,7 +167,4 @@ def shit_price_avg(df):
     """
     if df.empty:
         return 0
-
-    # Calculate the average SHIT price
-    shit_price = df['SOL Received']/ (df['SHIT Sent']*0.14)
-    return shit_price.mean()
+    return df['Price'].mean()
